@@ -6,7 +6,7 @@ class Tree(Piece):
     """
     Tree piece - 2 points
     - Can be chopped down by lumberjacks
-    - Acts as obstacle for all other pieces (cannot pass through)
+    - Acts as an obstacle for all other pieces (cannot pass through)
     - Cannot be moved, only captured
     """
 

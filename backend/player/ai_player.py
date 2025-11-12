@@ -11,7 +11,8 @@ class AIPlayer(Player):
 
     def choose_action(self, game_engine):
         """AI chooses a random valid action."""
-        print(f"\n{self.name} is thinking...")
+        from common.logging_config import logger
+        logger.info(f"{self.name} is thinking...")
         
         # During FLIP phase, prioritize flipping tiles
         if game_engine.phase.name == "FLIP" and game_engine.board.has_hidden_tiles():
@@ -27,6 +28,7 @@ class AIPlayer(Player):
     
     def _choose_random_flip(self, game_engine):
         """Choose a random tile to flip."""
+        from common.logging_config import logger
         hidden_tiles = []
         
         for x in range(game_engine.board.size):
@@ -38,13 +40,14 @@ class AIPlayer(Player):
         
         if hidden_tiles:
             target = random.choice(hidden_tiles)
-            print(f"{self.name} flips tile at ({target.x}, {target.y})")
+            logger.info(f"{self.name} flips tile at ({target.x}, {target.y})")
             return Action(ActionType.FLIP, target=target)
         
         return None
     
     def _choose_random_move(self, game_engine):
         """Choose a random piece to move."""
+        from common.logging_config import logger
         movable_pieces = []
         
         for x in range(game_engine.board.size):
@@ -52,9 +55,10 @@ class AIPlayer(Player):
                 coord = Coord(x, y)
                 tile = game_engine.board.get_tile(coord)
                 if tile and tile.flipped:
-                    # For now, just collect pieces that exist
-                    # TODO: Add piece ownership logic
-                    movable_pieces.append(coord)
+                    # Check if AI can move this piece based on ownership rules
+                    can_move, _ = game_engine.rules_validator._check_piece_ownership(self, tile)
+                    if can_move:
+                        movable_pieces.append(coord)
         
         if movable_pieces:
             # Pick random piece
@@ -67,7 +71,7 @@ class AIPlayer(Player):
             for dx, dy in directions:
                 target = Coord(source.x + dx, source.y + dy)
                 if game_engine.board.is_within_bounds(target):
-                    print(f"{self.name} moves piece from ({source.x}, {source.y}) to ({target.x}, {target.y})")
+                    logger.info(f"{self.name} moves piece from ({source.x}, {source.y}) to ({target.x}, {target.y})")
                     return Action(ActionType.MOVE, source=source, target=target)
         
         return None

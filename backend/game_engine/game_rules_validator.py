@@ -307,21 +307,21 @@ class GameRulesValidator:
         """
         
         # Check if piece is trying to return to previous position
-        if hasattr(piece_tile, 'previous_position') and piece_tile.previous_position:
-            if piece_tile.previous_position.x == target.x and piece_tile.previous_position.y == target.y:
-                return False, "Cannot return to previous position"
+        if (hasattr(piece_tile, 'previous_position') and piece_tile.previous_position and 
+            piece_tile.previous_position.x == target.x and piece_tile.previous_position.y == target.y):
+            return False, "Cannot return to previous position"
         
         # For green pieces (ducks and pheasants), check opponent restrictions
         if piece_tile.tile_type in [TileType.DUCK, TileType.PHEASANT]:
             # Check if opponent was the last to move this piece
-            if hasattr(piece_tile, 'last_moved_by') and piece_tile.last_moved_by:
-                if piece_tile.last_moved_by != player:
-                    return False, "Cannot move green piece that opponent just moved"
+            if (hasattr(piece_tile, 'last_moved_by') and piece_tile.last_moved_by and 
+                piece_tile.last_moved_by != player):
+                return False, "Cannot move green piece that opponent just moved"
             
             # Check if opponent was the last to reveal this piece
-            if hasattr(piece_tile, 'last_revealed_by') and piece_tile.last_revealed_by:
-                if piece_tile.last_revealed_by != player:
-                    return False, "Cannot move green piece that opponent just revealed"
+            if (hasattr(piece_tile, 'last_revealed_by') and piece_tile.last_revealed_by and 
+                piece_tile.last_revealed_by != player):
+                return False, "Cannot move green piece that opponent just revealed"
         
         return True, ""
     

@@ -1,6 +1,7 @@
 ﻿from tile.tile import Tile
 from tile.tile_types import TileType, TileOwner
 from common.models.coordinate import Coord
+from common.logging_config import logger
 from typing import Optional
 import random
 
@@ -46,8 +47,7 @@ class Board:
         # Create list of all pieces to place
         pieces_to_place = []
         for tile_type, owner, count in piece_distribution:
-            for _ in range(count):
-                pieces_to_place.append((tile_type, owner))
+            pieces_to_place.extend([(tile_type, owner)] * count)
         
         # Verify we have exactly the right number of pieces
         assert len(pieces_to_place) == 48, f"Expected 48 pieces, got {len(pieces_to_place)}"
@@ -97,9 +97,7 @@ class Board:
         return point_values.get(tile_type, 0)
 
     def get_tile(self, pos):
-        if not self.is_within_bounds(pos):
-            return None
-        return self.grid[pos.x][pos.y]
+        return None if not self.is_within_bounds(pos) else self.grid[pos.x][pos.y]
 
     def is_within_bounds(self, pos):
         return 0 <= pos.x < self.size and 0 <= pos.y < self.size
@@ -206,11 +204,11 @@ class Board:
                     points = target_tile.points
                     target_tile.capture()
                     self.grid[target_pos.x][target_pos.y] = None
-                    print(f"Hunter shot {target_tile.tile_type.name} for {points} points!")
+                    logger.info(f"Hunter shot {target_tile.tile_type.name} for {points} points!")
                     break
                 else:
                     # Shot blocked by non-capturable piece (tree, other hunter, etc.)
-                    print(f"Hunter shot blocked by {target_tile.tile_type.name}")
+                    logger.info(f"Hunter shot blocked by {target_tile.tile_type.name}")
                     break
             
             distance += 1
@@ -248,12 +246,12 @@ class Board:
                     target_tile.capture()
                     self.grid[target_pos.x][target_pos.y] = None
                     trees_cut += 1
-                    print(f"Lumberjack cut down tree at ({target_pos.x}, {target_pos.y}) for {target_tile.points} points!")
+                    logger.info(f"Lumberjack cut down tree at ({target_pos.x}, {target_pos.y}) for {target_tile.points} points!")
         
         if trees_cut == 0:
-            print("No trees adjacent to lumberjack to cut")
+            logger.info("No trees adjacent to lumberjack to cut")
         else:
-            print(f"Lumberjack cut down {trees_cut} tree(s) for {points} total points!")
+            logger.info(f"Lumberjack cut down {trees_cut} tree(s) for {points} total points!")
         
         return points
 
@@ -296,7 +294,7 @@ class Board:
                         "East" if pos.x == 6 else \
                         "South" if pos.y == 6 else "West"
         
-        print(f"{piece_tile.tile_type.name} escaped through {exit_direction} forest exit for {points} points!")
+        logger.info(f"{piece_tile.tile_type.name} escaped through {exit_direction} forest exit for {points} points!")
         return points, True
 
     def escape_to_exit_position(self, source_pos: Coord, exit_pos: Coord, player) -> tuple[int, bool]:
@@ -321,7 +319,7 @@ class Board:
                         "East" if exit_pos.x == 7 else \
                         "South" if exit_pos.y == 7 else "West"
         
-        print(f"{piece_tile.tile_type.name} escaped through {exit_direction} forest exit for {points} points!")
+        logger.info(f"{piece_tile.tile_type.name} escaped through {exit_direction} forest exit for {points} points!")
         return points, True
 
     def _can_reach_exit_position(self, source_pos: Coord, exit_pos: Coord, piece_tile) -> bool:
@@ -378,8 +376,7 @@ class Board:
         current = Coord(source_pos.x + move_dx, source_pos.y + move_dy)
         
         while self.is_within_bounds(current):
-            tile = self.get_tile(current)
-            if tile:
+            if (tile := self.get_tile(current)):
                 return False  # Path blocked
             current = Coord(current.x + move_dx, current.y + move_dy)
         
@@ -404,25 +401,8 @@ class Board:
             Coord(0, 3),  # West edge
         ]
         
-        for edge_pos in edge_positions:
-            # Check if piece can move to this edge position
-            if self._can_reach_edge_position(source_pos, edge_pos, piece_tile):
-                valid_exits.append(edge_pos)
-        
-        return valid_exits
-        edge_positions = [
-            Coord(3, 0),  # North edge
-            Coord(6, 3),  # East edge  
-            Coord(3, 6),  # South edge
-            Coord(0, 3),  # West edge
-        ]
-        
-        for edge_pos in edge_positions:
-            # Check if piece can move to this edge position
-            if self._can_reach_edge_position(source_pos, edge_pos, piece_tile):
-                valid_exits.append(edge_pos)
-        
-        return valid_exits
+        return [edge_pos for edge_pos in edge_positions
+                if self._can_reach_edge_position(source_pos, edge_pos, piece_tile)]
 
     def _can_reach_edge_position(self, source_pos: Coord, edge_pos: Coord, piece_tile) -> bool:
         """
@@ -460,8 +440,7 @@ class Board:
             current = Coord(source_pos.x + move_dx, source_pos.y + move_dy)
             
             while current != edge_pos:
-                tile = self.get_tile(current)
-                if tile:
+                if (tile := self.get_tile(current)):
                     return False  # Path blocked
                 current = Coord(current.x + move_dx, current.y + move_dy)
         

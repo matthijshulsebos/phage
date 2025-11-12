@@ -11,8 +11,9 @@ class HumanPlayer(Player):
 
     def choose_action(self, game_engine):
         """Prompt the human player for an action."""
-        print(f"\n{self.name}'s turn (Phase: {game_engine.phase.name})")
-        print(f"Score: {game_engine.scores[self.name]}")
+        from common.logging_config import logger
+        logger.info(f"\n{self.name}'s turn (Phase: {game_engine.phase.name})")
+        logger.info(f"Score: {game_engine.scores[self.name]}")
         
         # Show available actions based on game phase
         if game_engine.phase.name == "FLIP":
@@ -88,10 +89,22 @@ class HumanPlayer(Player):
             x, y = map(int, input().split())
             source = Coord(x, y)
             
-            return Action(ActionType.SHOOT, target=source)
+            # Prompt for shooting direction
+            print("Choose shooting direction (N/S/E/W):")
+            direction_input = input().upper().strip()
+            direction_map = {'N': 'NORTH', 'S': 'SOUTH', 'E': 'EAST', 'W': 'WEST'}
+            
+            if direction_input not in direction_map:
+                print("Invalid direction! Use N, S, E, or W.")
+                return self.choose_action(game_engine)
+            
+            from common.models.direction import Direction
+            direction = Direction[direction_map[direction_input]]
+            
+            return Action(ActionType.SHOOT, source=source, direction=direction)
             
         except (ValueError, IndexError):
-            print("Invalid coordinates!")
+            print("Invalid input!")
             return self.choose_action(game_engine)
     
     def _choose_cut_action(self, game_engine):

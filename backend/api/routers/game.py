@@ -74,27 +74,29 @@ async def apply_action(game_id: str, action_request: ActionRequest, player_name:
         )
         
         # Apply the action
-        success, message = game_session_manager.apply_action(game_id, player_name, action)
-        
+        success, message, points_gained = game_session_manager.apply_action(game_id, player_name, action)
+
         if not success:
             return ActionResultResponse(
                 success=False,
-                message=message
+                message=message,
+                points_gained=0
             )
-        
+
         # Get updated game state
         game_state = game_session_manager.get_game_state(game_id)
-        
+
         return ActionResultResponse(
             success=True,
             message=message,
+            points_gained=points_gained,
             game_state=GameStateResponse(**game_state) if game_state else None
         )
         
     except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid action parameter: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid action parameter: {str(e)}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to apply action: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to apply action: {str(e)}") from e
 
 
 @router.get("/list", response_model=List[GameListItemResponse])
@@ -104,7 +106,9 @@ async def list_games(include_inactive: bool = False):
         games = game_session_manager.list_games(include_inactive)
         return [GameListItemResponse(**game) for game in games]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list games: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list games: {str(e)}"
+        ) from e
 
 
 @router.delete("/{game_id}")
@@ -124,7 +128,9 @@ async def get_stats():
         stats = game_session_manager.get_stats()
         return StatsResponse(**stats)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get stats: {str(e)}"
+        ) from e
 
 
 @router.post("/cleanup")
@@ -134,4 +140,6 @@ async def cleanup_expired_games(timeout_hours: int = 24):
         count = game_session_manager.cleanup_expired_games(timeout_hours)
         return {"message": f"Cleaned up {count} expired games"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to cleanup: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to cleanup: {str(e)}"
+        ) from e

@@ -23,7 +23,7 @@ class GameSession:
         # Player 1 gets the Brown/Hunter faction (PLAYER1)
         # Player 2 gets the Blue/Animal faction (PLAYER2)
         player1 = HumanPlayer(self.player1_name, PieceOwner.PLAYER1)
-        player2 = AIPlayer(self.player2_name, PieceOwner.PLAYER2) if not player2_name else HumanPlayer(self.player2_name, PieceOwner.PLAYER2)
+        player2 = HumanPlayer(self.player2_name, PieceOwner.PLAYER2) if player2_name else AIPlayer(self.player2_name, PieceOwner.PLAYER2)
         
         # Create game engine
         self.game_engine = GameEngine([player1, player2])
@@ -76,7 +76,8 @@ class GameSessionManager:
             session = GameSession(game_id, player1_name, player2_name)
             self.sessions[game_id] = session
             
-            print(f"Created game {game_id}: {player1_name} vs {session.player2_name}")
+            from common.logging_config import logger
+            logger.info(f"Created game {game_id}: {player1_name} vs {session.player2_name}")
             return game_id
     
     def get_game(self, game_id: str) -> Optional[GameSession]:
@@ -87,57 +88,52 @@ class GameSessionManager:
                 session.update_activity()
             return session
     
-    def apply_action(self, game_id: str, player_name: str, action: Action) -> Tuple[bool, str]:
+    def apply_action(self, game_id: str, player_name: str, action: Action) -> Tuple[bool, str, int]:
         """
         Apply an action to a game session.
-        Returns (success, message).
+        Returns (success, message, points_gained).
         """
         with self.lock:
             session = self.get_game(game_id)
             if not session:
-                return False, "Game not found"
-            
+                return False, "Game not found", 0
+
             if not session.is_active:
-                return False, "Game is not active"
-            
+                return False, "Game is not active", 0
+
             # Find the player
-            player = None
-            for p in session.game_engine.players:
-                if p.name == player_name:
-                    player = p
-                    break
-            
+            player = next((p for p in session.game_engine.players if p.name == player_name), None)
             if not player:
-                return False, "Player not found in this game"
-            
+                return False, "Player not found in this game", 0
+
             # Check if it's the player's turn
             current_player = session.game_engine.current_player
             if current_player.name != player_name:
-                return False, f"Not your turn. Current player: {current_player.name}"
-            
+                return False, f"Not your turn. Current player: {current_player.name}", 0
+
             try:
                 # Apply the action
                 points = session.game_engine.apply_action(player, action)
-                
+
                 # Add to history
                 session.add_to_history(player_name, action)
-                
+
                 # Update scores
                 session.game_engine.update_scores(player, points)
-                
+
                 # Advance turn
                 session.game_engine.next_turn()
-                
+
                 # Check if game is over
                 if session.game_engine.is_game_over:
                     session.is_active = False
                     session.winner = session.game_engine.winner.name if session.game_engine.winner else "Draw"
-                
-                return True, f"Action applied. Points gained: {points}"
-                
+
+                return True, f"Action applied. Points gained: {points}", points
+
             except ValueError as e:
-                return False, str(e)
-    
+                return False, str(e), 0
+
     def get_game_state(self, game_id: str) -> Optional[Dict]:
         """Get the current state of a game."""
         session = self.get_game(game_id)
@@ -193,43 +189,41 @@ class GameSessionManager:
         with self.lock:
             games = []
             for game_id, session in self.sessions.items():
-                if not include_inactive and not session.is_active:
-                    continue
-                
-                games.append({
-                    'game_id': game_id,
-                    'players': [session.player1_name, session.player2_name],
-                    'is_active': session.is_active,
-                    'created_at': session.created_at.isoformat(),
-                    'current_player': session.game_engine.current_player.name,
-                    'phase': session.game_engine.phase.name,
-                    'winner': session.winner
-                })
+                if include_inactive or session.is_active:
+                    games.append({
+                        'game_id': game_id,
+                        'players': [session.player1_name, session.player2_name],
+                        'is_active': session.is_active,
+                        'created_at': session.created_at.isoformat(),
+                        'current_player': session.game_engine.current_player.name,
+                        'phase': session.game_engine.phase.name,
+                        'winner': session.winner
+                    })
             
             return sorted(games, key=lambda x: x['created_at'], reverse=True)
     
     def cleanup_expired_games(self, timeout_hours: int = 24) -> int:
         """Remove expired game sessions. Returns number of games cleaned up."""
+        from common.logging_config import logger
         with self.lock:
-            expired_games = []
-            for game_id, session in self.sessions.items():
-                if session.is_expired(timeout_hours):
-                    expired_games.append(game_id)
-            
+            expired_games = [game_id for game_id, session in self.sessions.items() 
+                           if session.is_expired(timeout_hours)]
+
             for game_id in expired_games:
                 del self.sessions[game_id]
-            
+
             if expired_games:
-                print(f"Cleaned up {len(expired_games)} expired games")
-            
+                logger.info(f"Cleaned up {len(expired_games)} expired games")
+
             return len(expired_games)
     
     def delete_game(self, game_id: str) -> bool:
         """Delete a specific game session."""
+        from common.logging_config import logger
         with self.lock:
             if game_id in self.sessions:
                 del self.sessions[game_id]
-                print(f"Deleted game {game_id}")
+                logger.info(f"Deleted game {game_id}")
                 return True
             return False
     
@@ -237,7 +231,7 @@ class GameSessionManager:
         """Get overall statistics."""
         with self.lock:
             total_games = len(self.sessions)
-            active_games = sum(1 for s in self.sessions.values() if s.is_active)
+            active_games = sum(bool(s.is_active) for s in self.sessions.values())
             
             return {
                 'total_games': total_games,

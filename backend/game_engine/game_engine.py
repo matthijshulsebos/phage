@@ -3,6 +3,7 @@ from .models.game_phase import GamePhase
 from .game_rules_validator import GameRulesValidator
 from common.models.action import ActionType
 from board.board import Board
+from common.logging_config import logger
 
 
 class GameEngine:
@@ -14,7 +15,7 @@ class GameEngine:
     """
 
     def __init__(self, players, board=None):
-        self.board = board if board else Board()
+        self.board = board or Board()
         self.players = players
         self.current_turn = 0
         self.current_player_turn_index = 0
@@ -41,7 +42,7 @@ class GameEngine:
     def start(self) -> None:
         """Starts the game loop."""
 
-        print("Welcome to De Beer is Los!")
+        logger.info("Welcome to De Beer is Los!")
         self.run_game_loop()
         return None
 
@@ -129,13 +130,14 @@ class GameEngine:
 
     def end_game(self) -> None:
         """Calculates final scores and declares the winner."""
+        from common.logging_config import logger
 
         highest_score = -1
         
         for player in self.players:
-            if player.score > highest_score:
-                highest_score = player.score
+            if self.scores[player.name] > highest_score:
+                highest_score = self.scores[player.name]
                 self.winner = player
         
-        print(f"Game Over! The winner is {self.winner.name} with {highest_score} points.")
+        logger.info(f"Game Over! The winner is {self.winner.name} with {highest_score} points.")
         
