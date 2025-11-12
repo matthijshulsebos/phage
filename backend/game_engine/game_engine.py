@@ -1,5 +1,6 @@
 from player.player import Player
 from .models.game_phase import GamePhase
+from .game_rules_validator import GameRulesValidator
 from common.models.action import ActionType
 from board.board import Board
 
@@ -22,6 +23,7 @@ class GameEngine:
         self.rounds_remaining = None
         self.winner = None
         self.scores = {player.name: 0 for player in players}
+        self.rules_validator = GameRulesValidator(self)
 
 
     @property
@@ -83,6 +85,11 @@ class GameEngine:
 
     def apply_action(self, player, action) -> int:
         """Apply the given action to the board/game state."""
+        
+        # Validate action first
+        is_valid, error_msg = self.rules_validator.validate_action(player, action)
+        if not is_valid:
+            raise ValueError(f"Invalid action: {error_msg}")
 
         points = 0
         

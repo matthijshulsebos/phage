@@ -44,6 +44,10 @@ class Board:
                     return False
         return True
 
+    def has_hidden_tiles(self):
+        """Return True if any tile is still face-down."""
+        return self.face_down_tiles_count > 0
+
     def flip_tile(self, pos):
         tile = self.get_tile(pos)
         if tile and not tile.flipped:
