@@ -12,8 +12,8 @@ class GameEngine:
 
     """
 
-    def __init__(self, board, players):
-        self.board = Board()
+    def __init__(self, players, board=None):
+        self.board = board if board else Board()
         self.players = players
         self.current_turn = 0
         self.current_player_turn_index = 0
@@ -21,6 +21,7 @@ class GameEngine:
         self.phase = GamePhase.FLIP
         self.rounds_remaining = None
         self.winner = None
+        self.scores = {player.name: 0 for player in players}
 
 
     @property
@@ -88,11 +89,11 @@ class GameEngine:
         if action.type == ActionType.FLIP:
             self.board.flip_tile(action.target)
         elif action.type == ActionType.MOVE:
-            self.board.move_piece(player, action.target, action.direction, action.steps)
+            points, captured = self.board.move_tile(action.source, action.target, player)
         elif action.type == ActionType.SHOOT:
             points = self.board.shoot(player, action.target, action.direction)
         elif action.type == ActionType.CUT:
-            points = self.board.cut_tree(action.target)
+            points = self.board.cut_tree(action.target, player)
 
         return points
 
