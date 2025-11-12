@@ -1,7 +1,6 @@
 from enum import Enum
 
 class TileType(Enum):
-    EMPTY = "empty"
     BEAR = "bear"
     FOX = "fox" 
     HUNTER = "hunter"
@@ -15,4 +14,3 @@ class TileOwner(Enum):
     PLAYER1 = "player1"
     PLAYER2 = "player2"
     NEUTRAL = "neutral"
-    

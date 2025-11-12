@@ -96,13 +96,79 @@ class GameRulesValidator:
 
     def _validate_shoot(self, player, action: Action) -> Tuple[bool, str]:
         """Validate shooting action."""
-        # TODO: Implement shooting validation
-        return False, "Shooting not yet implemented"
+        
+        # Check if position is valid
+        if not self.game_engine.board.is_within_bounds(action.target):
+            return False, "Position out of bounds"
+        
+        # Check if there's a hunter at the position
+        hunter_tile = self.game_engine.board.get_tile(action.target)
+        if not hunter_tile:
+            return False, "No piece at that position"
+        
+        if not hunter_tile.flipped:
+            return False, "Cannot shoot with face-down piece"
+        
+        if hunter_tile.tile_type != TileType.HUNTER:
+            return False, "Only hunters can shoot"
+        
+        # Check ownership
+        can_move, ownership_msg = self._check_piece_ownership(player, hunter_tile)
+        if not can_move:
+            return False, ownership_msg
+        
+        # Shooting direction validation would go here
+        # For now, assume direction is provided and valid
+        if not action.direction:
+            return False, "Shooting direction required"
+        
+        return True, ""
 
     def _validate_cut(self, player, action: Action) -> Tuple[bool, str]:
         """Validate tree cutting action."""
-        # TODO: Implement tree cutting validation
-        return False, "Tree cutting not yet implemented"
+        
+        # Check if position is valid
+        if not self.game_engine.board.is_within_bounds(action.target):
+            return False, "Position out of bounds"
+        
+        # Check if there's a lumberjack at the position
+        lumberjack_tile = self.game_engine.board.get_tile(action.target)
+        if not lumberjack_tile:
+            return False, "No piece at that position"
+        
+        if not lumberjack_tile.flipped:
+            return False, "Cannot cut with face-down piece"
+        
+        if lumberjack_tile.tile_type != TileType.LUMBERJACK:
+            return False, "Only lumberjacks can cut trees"
+        
+        # Check ownership
+        can_move, ownership_msg = self._check_piece_ownership(player, lumberjack_tile)
+        if not can_move:
+            return False, ownership_msg
+        
+        # Check if there are adjacent trees to cut
+        from common.models.direction import Direction
+        has_adjacent_trees = False
+        
+        directions = [Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST]
+        for direction in directions:
+            dx, dy = direction.value
+            adjacent_pos = type('Coord', (), {
+                'x': action.target.x + dx, 
+                'y': action.target.y + dy
+            })()
+            
+            if self.game_engine.board.is_within_bounds(adjacent_pos):
+                adjacent_tile = self.game_engine.board.get_tile(adjacent_pos)
+                if adjacent_tile and adjacent_tile.tile_type == TileType.TREE:
+                    has_adjacent_trees = True
+                    break
+        
+        if not has_adjacent_trees:
+            return False, "No trees adjacent to lumberjack"
+        
+        return True, ""
 
     def _check_piece_ownership(self, player, tile) -> Tuple[bool, str]:
         """

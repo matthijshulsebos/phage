@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 from common.models.action import Action
+from pieces.piece_owner import PieceOwner
 
 class Player(ABC):
-    def __init__(self, name: str):
+    def __init__(self, name: str, faction: PieceOwner = None):
         self.name = name
+        self.faction = faction
         self.pieces = []
         self.score = 0
 

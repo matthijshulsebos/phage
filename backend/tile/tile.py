@@ -4,7 +4,7 @@ from common.models.coordinate import Coord
 from typing import Optional
 
 class Tile:
-    def __init__(self, position: Coord, tile_type: TileType = TileType.EMPTY, 
+    def __init__(self, position: Coord, tile_type: TileType, 
                  faction: TileOwner = TileOwner.NONE, points: int = 0):
         self.tile_type = tile_type
         self.faction = faction
@@ -13,7 +13,7 @@ class Tile:
         self.position = position
         self.alive = True
 
-    
+
     def flip(self):
         """Reveal this tile."""
         self.flipped = True
@@ -30,7 +30,8 @@ class Tile:
 
     def is_movable(self):
         """Return True if this tile can be moved by a player."""
-        return self.tile_type not in (TileType.TREE, TileType.EMPTY)
+        # Only trees cannot be moved (they can only be cut)
+        return self.tile_type != TileType.TREE
 
     def belongs_to(self, player_faction):
         """Check if this tile is controlled by a player."""

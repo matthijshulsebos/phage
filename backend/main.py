@@ -5,7 +5,7 @@ from player.human_player import HumanPlayer
 
 if __name__ == '__main__':
     players = [
-        HumanPlayer("Mathieu"),
+        HumanPlayer("Mat"),
         AIPlayer("Bot Bob"),
     ]
     game = GameEngine(players)

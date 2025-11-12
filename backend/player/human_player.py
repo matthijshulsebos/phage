@@ -1,12 +1,13 @@
 from player.player import Player
+from pieces.piece_owner import PieceOwner
 from common.models.action import Action, ActionType
 from common.models.coordinate import Coord
 from common.models.direction import Direction
 
 
 class HumanPlayer(Player):
-    def __init__(self, name: str):
-        super().__init__(name)
+    def __init__(self, name: str, faction: PieceOwner = None):
+        super().__init__(name, faction)
 
     def choose_action(self, game_engine):
         """Prompt the human player for an action."""
