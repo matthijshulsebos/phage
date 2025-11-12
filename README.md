@@ -1,2 +1,4 @@
-# billy
-Engine for the popular Dutch children's game 'De beer is los!'.
+# de-beer-is-los
+This is a fan-made software implementation of "De Beer is Los!".
+It is not affiliated with or endorsed by the original creators.
+All assets and code are original or freely licensed.
