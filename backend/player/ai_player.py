@@ -1,12 +1,13 @@
 from player.player import Player
+from pieces.piece_owner import PieceOwner
 from common.models.action import Action, ActionType
 from common.models.coordinate import Coord
 import random
 
 
 class AIPlayer(Player):
-    def __init__(self, name: str):
-        super().__init__(name)
+    def __init__(self, name: str, faction: PieceOwner = None):
+        super().__init__(name, faction)
 
     def choose_action(self, game_engine):
         """AI chooses a random valid action."""

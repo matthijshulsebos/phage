@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from game_engine.game_engine import GameEngine
 from player.ai_player import AIPlayer
 from player.human_player import HumanPlayer
+from pieces.piece_owner import PieceOwner
 from common.models.action import Action
 
 
@@ -18,9 +19,11 @@ class GameSession:
         self.player1_name = player1_name
         self.player2_name = player2_name or "AI Bot"
         
-        # Create players
-        player1 = HumanPlayer(self.player1_name)
-        player2 = AIPlayer(self.player2_name) if not player2_name else HumanPlayer(self.player2_name)
+        # Create players with proper factions
+        # Player 1 gets the Brown/Hunter faction (PLAYER1)
+        # Player 2 gets the Blue/Animal faction (PLAYER2)
+        player1 = HumanPlayer(self.player1_name, PieceOwner.PLAYER1)
+        player2 = AIPlayer(self.player2_name, PieceOwner.PLAYER2) if not player2_name else HumanPlayer(self.player2_name, PieceOwner.PLAYER2)
         
         # Create game engine
         self.game_engine = GameEngine([player1, player2])

@@ -1,6 +1,7 @@
 from common.models.action import Action, ActionType
 from common.models.coordinate import Coord
 from tile.tile_types import TileType, TileOwner
+from pieces.piece_owner import PieceOwner
 from typing import List, Optional, Tuple
 
 
@@ -74,6 +75,10 @@ class GameRulesValidator:
         if not can_move:
             return False, ownership_msg
         
+        # Check if target is a forest exit (special case for ESCAPE phase)
+        if self.game_engine.board.is_forest_exit(action.target):
+            return self._validate_forest_exit(player, from_tile, action.source, action.target)
+        
         # Check if target position allows movement
         to_tile = self.game_engine.board.get_tile(action.target)
         if to_tile:
@@ -91,6 +96,11 @@ class GameRulesValidator:
         path_clear, path_msg = self._check_movement_path(from_tile, action.source, action.target)
         if not path_clear:
             return False, path_msg
+        
+        # Check movement restrictions
+        restriction_valid, restriction_msg = self._check_movement_restrictions(player, from_tile, action.source, action.target)
+        if not restriction_valid:
+            return False, restriction_msg
         
         return True, ""
 
@@ -175,32 +185,31 @@ class GameRulesValidator:
         Check if player can move this piece.
         
         Rules:
-        - Brown cards can only be moved by the brown player (Player1)
-        - Blue cards can only be moved by the blue player (Player2)  
-        - Green cards (pheasants and ducks) can be moved by both players
+        - Brown pieces (hunters/lumberjacks) can only be moved by PLAYER1
+        - Blue pieces (bears/foxes) can only be moved by PLAYER2  
+        - Green pieces (pheasants and ducks) can be moved by both players
         - A green card that was revealed or moved by opponent cannot be moved immediately after
         """
         
         if not hasattr(tile, 'tile_type'):
             return False, "Invalid piece"
         
-        # Map players to factions (this is a simplification)
-        # TODO: Add proper player faction system
-        player_index = self.game_engine.players.index(player)
+        if not hasattr(player, 'faction') or player.faction is None:
+            return False, "Player has no faction assigned"
         
+        # Check ownership based on player faction and tile faction
         if tile.tile_type in [TileType.HUNTER, TileType.LUMBERJACK]:
-            # Brown pieces - only Player 1
-            if player_index != 0:
+            # Brown pieces - only PLAYER1
+            if player.faction != PieceOwner.PLAYER1:
                 return False, "Cannot move opponent's hunter/lumberjack pieces"
         
         elif tile.tile_type in [TileType.BEAR, TileType.FOX]:
-            # Blue pieces - only Player 2  
-            if player_index != 1:
+            # Blue pieces - only PLAYER2  
+            if player.faction != PieceOwner.PLAYER2:
                 return False, "Cannot move opponent's bear/fox pieces"
         
         elif tile.tile_type in [TileType.DUCK, TileType.PHEASANT]:
-            # Green pieces - both players can move, but with restrictions
-            # TODO: Add "recently moved by opponent" tracking
+            # Green pieces - both players can move them (restrictions checked separately)
             pass
         
         elif tile.tile_type == TileType.TREE:
@@ -281,5 +290,59 @@ class GameRulesValidator:
                 return False, f"Path blocked by piece at ({current.x}, {current.y})"
             
             current = Coord(current.x + dx, current.y + dy)
+        
+        return True, ""
+    
+    def _check_movement_restrictions(self, player, piece_tile, source: Coord, target: Coord) -> Tuple[bool, str]:
+        """
+        Check movement restrictions:
+        1. Pieces cannot return to their previous position
+        2. Green pieces moved/revealed by opponent cannot be moved immediately after
+        """
+        
+        # Check if piece is trying to return to previous position
+        if hasattr(piece_tile, 'previous_position') and piece_tile.previous_position:
+            if piece_tile.previous_position.x == target.x and piece_tile.previous_position.y == target.y:
+                return False, "Cannot return to previous position"
+        
+        # For green pieces (ducks and pheasants), check opponent restrictions
+        if piece_tile.tile_type in [TileType.DUCK, TileType.PHEASANT]:
+            # Check if opponent was the last to move this piece
+            if hasattr(piece_tile, 'last_moved_by') and piece_tile.last_moved_by:
+                if piece_tile.last_moved_by != player:
+                    return False, "Cannot move green piece that opponent just moved"
+            
+            # Check if opponent was the last to reveal this piece
+            if hasattr(piece_tile, 'last_revealed_by') and piece_tile.last_revealed_by:
+                if piece_tile.last_revealed_by != player:
+                    return False, "Cannot move green piece that opponent just revealed"
+        
+        return True, ""
+    
+    def _validate_forest_exit(self, player, piece_tile, source: Coord, exit_pos: Coord) -> Tuple[bool, str]:
+        """
+        Validate forest exit move during ESCAPE phase.
+        """
+        
+        # Can only use forest exits during ESCAPE phase
+        if self.game_engine.phase.name != "ESCAPE":
+            return False, "Forest exits only available during escape phase"
+        
+        # Players can only move their own pieces through exits
+        # Brown pieces (hunters/lumberjacks) belong to PLAYER1
+        # Blue pieces (bears/foxes) belong to PLAYER2
+        # Green pieces (ducks/pheasants) can be moved by both players
+        if piece_tile.tile_type in [TileType.HUNTER, TileType.LUMBERJACK]:
+            if player.faction != PieceOwner.PLAYER1:
+                return False, "Cannot escape opponent's brown pieces"
+        elif piece_tile.tile_type in [TileType.BEAR, TileType.FOX]:
+            if player.faction != PieceOwner.PLAYER2:
+                return False, "Cannot escape opponent's blue pieces"
+        # Green pieces can be escaped by either player (no additional check needed)
+        
+        # Check if piece can reach the exit (same movement rules apply)
+        can_reach = self.game_engine.board._can_reach_exit(source, exit_pos, piece_tile)
+        if not can_reach:
+            return False, "Cannot reach forest exit with this piece"
         
         return True, ""
