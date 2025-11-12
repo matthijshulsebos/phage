@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import Enum
 from typing import Optional
 
 class ActionType(Enum):
-    FLIP = auto()
-    MOVE = auto()
-    SHOOT = auto()
-    CUT = auto()
+    FLIP = "flip"
+    MOVE = "move"
+    SHOOT = "shoot"
+    CUT = "cut"
 
 @dataclass(frozen=True)
 class Action:
