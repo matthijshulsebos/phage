@@ -1,16 +1,19 @@
 
+from .tile_types import TileType, TileOwner
+from common.models.coordinate import Coord
+from typing import Optional
+
 class Tile:
-    def __init__(self, tile_type: TileType, faction: TileOwner = TileOwner.NONE, points: int = 0):
+    def __init__(self, position: Coord, tile_type: TileType = TileType.EMPTY, 
+                 faction: TileOwner = TileOwner.NONE, points: int = 0):
         self.tile_type = tile_type
         self.faction = faction
         self.points = points
         self.flipped = False
-        self.position = None
+        self.position = position
         self.alive = True
 
-    # -------------------------
-    # State changes
-    # -------------------------
+    
     def flip(self):
         """Reveal this tile."""
         self.flipped = True
@@ -20,13 +23,11 @@ class Tile:
         self.alive = False
         self.position = None
 
-    def move_to(self, pos):
+    def move_to(self, pos: Coord):
         """Update position when moved on the board."""
         self.position = pos
 
-    # -------------------------
-    # Helpers
-    # -------------------------
+
     def is_movable(self):
         """Return True if this tile can be moved by a player."""
         return self.tile_type not in (TileType.TREE, TileType.EMPTY)
@@ -34,3 +35,4 @@ class Tile:
     def belongs_to(self, player_faction):
         """Check if this tile is controlled by a player."""
         return self.faction == player_faction
+    
