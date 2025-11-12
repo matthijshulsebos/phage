@@ -23,6 +23,8 @@ class GameRulesValidator:
             return self._validate_flip(player, action)
         elif action.type == ActionType.MOVE:
             return self._validate_move(player, action)
+        elif action.type == ActionType.ESCAPE:
+            return self._validate_escape(player, action)
         elif action.type == ActionType.SHOOT:
             return self._validate_shoot(player, action)
         elif action.type == ActionType.CUT:
@@ -55,13 +57,11 @@ class GameRulesValidator:
     def _validate_move(self, player, action: Action) -> Tuple[bool, str]:
         """Validate piece movement action."""
         
-        # Check positions are valid
+        # Check source position is valid (must be on board)
         if not self.game_engine.board.is_within_bounds(action.source):
             return False, "Source position out of bounds"
-        if not self.game_engine.board.is_within_bounds(action.target):
-            return False, "Target position out of bounds"
         
-        # Check if there's a piece to move
+        # Get the piece to move
         from_tile = self.game_engine.board.get_tile(action.source)
         if not from_tile:
             return False, "No piece at source position"
@@ -75,9 +75,15 @@ class GameRulesValidator:
         if not can_move:
             return False, ownership_msg
         
-        # Check if target is a forest exit (special case for ESCAPE phase)
+        # Check if target is a forest exit (special case - outside bounds allowed)
         if self.game_engine.board.is_forest_exit(action.target):
-            return self._validate_forest_exit(player, from_tile, action.source, action.target)
+            return self._validate_forest_exit_move(player, from_tile, action.source, action.target)
+        
+        # For normal moves, check if target position is valid (must be on board)
+        if not self.game_engine.board.is_within_bounds(action.target):
+            return False, "Target position out of bounds"
+        if not self.game_engine.board.is_within_bounds(action.target):
+            return False, "Target position out of bounds"
         
         # Check if target position allows movement
         to_tile = self.game_engine.board.get_tile(action.target)
@@ -319,30 +325,51 @@ class GameRulesValidator:
         
         return True, ""
     
-    def _validate_forest_exit(self, player, piece_tile, source: Coord, exit_pos: Coord) -> Tuple[bool, str]:
+    def _validate_escape(self, player, action: Action) -> Tuple[bool, str]:
         """
-        Validate forest exit move during ESCAPE phase.
+        Validate forest escape action during ESCAPE phase.
+        """
+        
+        # Can only escape during ESCAPE phase
+        if self.game_engine.phase.name != "ESCAPE":
+            return False, "Forest exits only available during escape phase"
+        
+        # Check if source position is valid
+        if not self.game_engine.board.is_within_bounds(action.source):
+            return False, "Source position out of bounds"
+        
+        # Get the piece to escape
+        piece_tile = self.game_engine.board.get_tile(action.source)
+        if not piece_tile:
+            return False, "No piece at source position"
+        
+        # Check if tile is flipped
+        if not piece_tile.flipped:
+            return False, "Cannot escape with face-down piece"
+        
+        # Check ownership
+        can_move, ownership_msg = self._check_piece_ownership(player, piece_tile)
+        if not can_move:
+            return False, ownership_msg
+        
+        # Check if piece is at an edge position where it can escape
+        if not self.game_engine.board.can_exit_from_position(action.source):
+            return False, "Can only escape from forest exit positions: (3,0), (6,3), (3,6), or (0,3)"
+        
+        return True, ""
+    
+    def _validate_forest_exit_move(self, player, piece_tile, source: Coord, exit_pos: Coord) -> Tuple[bool, str]:
+        """
+        Validate move to forest exit position during ESCAPE phase.
         """
         
         # Can only use forest exits during ESCAPE phase
         if self.game_engine.phase.name != "ESCAPE":
             return False, "Forest exits only available during escape phase"
         
-        # Players can only move their own pieces through exits
-        # Brown pieces (hunters/lumberjacks) belong to PLAYER1
-        # Blue pieces (bears/foxes) belong to PLAYER2
-        # Green pieces (ducks/pheasants) can be moved by both players
-        if piece_tile.tile_type in [TileType.HUNTER, TileType.LUMBERJACK]:
-            if player.faction != PieceOwner.PLAYER1:
-                return False, "Cannot escape opponent's brown pieces"
-        elif piece_tile.tile_type in [TileType.BEAR, TileType.FOX]:
-            if player.faction != PieceOwner.PLAYER2:
-                return False, "Cannot escape opponent's blue pieces"
-        # Green pieces can be escaped by either player (no additional check needed)
-        
-        # Check if piece can reach the exit (same movement rules apply)
-        can_reach = self.game_engine.board._can_reach_exit(source, exit_pos, piece_tile)
+        # Check if piece can reach the exit position with their movement rules
+        can_reach = self.game_engine.board._can_reach_exit_position(source, exit_pos, piece_tile)
         if not can_reach:
-            return False, "Cannot reach forest exit with this piece"
+            return False, "Cannot reach forest exit from this position"
         
         return True, ""

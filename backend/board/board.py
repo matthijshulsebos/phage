@@ -10,13 +10,12 @@ class Board:
         self.size = 7
         self.grid = [[None for _ in range(self.size)] for _ in range(self.size)]
         
-        # Forest exit positions (4 exits at board edges)
-        # Positioned at middle of each edge with arrow indicators
+        # Forest exit positions (imaginary positions one step outside the board)
         self.forest_exits = [
-            Coord(3, 0),    # North exit (top edge, center)
-            Coord(6, 3),    # East exit (right edge, center)  
-            Coord(3, 6),    # South exit (bottom edge, center)
-            Coord(0, 3),    # West exit (left edge, center)
+            Coord(3, -1),   # North exit (one step north from edge)
+            Coord(7, 3),    # East exit (one step east from edge)
+            Coord(3, 7),    # South exit (one step south from edge)
+            Coord(-1, 3),   # West exit (one step west from edge)
         ]
         
         self._setup_initial_tiles()
@@ -259,17 +258,58 @@ class Board:
         return points
 
     def is_forest_exit(self, pos: Coord) -> bool:
-        """Check if a position is a forest exit."""
+        """Check if a position is a forest exit (imaginary position outside the board)."""
         return pos in self.forest_exits
 
-    def escape_through_exit(self, source_pos: Coord, player) -> tuple[int, bool]:
+    def can_exit_from_position(self, pos: Coord) -> bool:
+        """Check if a piece at this position can exit the forest during ESCAPE phase."""
+        # Pieces can exit from the 4 forest exit positions:
+        # North exit: (3, 0) - center of top edge
+        # East exit: (6, 3) - center of right edge  
+        # South exit: (3, 6) - center of bottom edge
+        # West exit: (0, 3) - center of left edge
+        
+        return (pos.x == 3 and pos.y == 0) or \
+               (pos.x == 6 and pos.y == 3) or \
+               (pos.x == 3 and pos.y == 6) or \
+               (pos.x == 0 and pos.y == 3)
+
+    def escape_from_position(self, pos: Coord, player) -> tuple[int, bool]:
         """
-        Escape a piece through a forest exit during the end game phase.
+        Escape a piece from an edge position during the ESCAPE phase.
         Returns (points, success).
-        Only allowed during ESCAPE phase.
+        """
+        piece_tile = self.get_tile(pos)
+        if not piece_tile:
+            return 0, False
+        
+        # Check if piece can exit from this position
+        if not self.can_exit_from_position(pos):
+            return 0, False
+        
+        # Remove the piece from the board and award points
+        points = piece_tile.points
+        piece_tile.capture()
+        self.grid[pos.x][pos.y] = None
+        
+        exit_direction = "North" if pos.y == 0 else \
+                        "East" if pos.x == 6 else \
+                        "South" if pos.y == 6 else "West"
+        
+        print(f"{piece_tile.tile_type.name} escaped through {exit_direction} forest exit for {points} points!")
+        return points, True
+
+    def escape_to_exit_position(self, source_pos: Coord, exit_pos: Coord, player) -> tuple[int, bool]:
+        """
+        Escape a piece by moving it to a forest exit position (outside the board).
+        Returns (points, success).
         """
         piece_tile = self.get_tile(source_pos)
         if not piece_tile:
+            return 0, False
+        
+        # Validate that the piece can reach this exit position
+        if not self._can_reach_exit_position(source_pos, exit_pos, piece_tile):
             return 0, False
         
         # Remove the piece from the board and award points
@@ -277,31 +317,17 @@ class Board:
         piece_tile.capture()
         self.grid[source_pos.x][source_pos.y] = None
         
-        print(f"{piece_tile.tile_type.name} escaped through forest exit for {points} points!")
+        exit_direction = "North" if exit_pos.y == -1 else \
+                        "East" if exit_pos.x == 7 else \
+                        "South" if exit_pos.y == 7 else "West"
+        
+        print(f"{piece_tile.tile_type.name} escaped through {exit_direction} forest exit for {points} points!")
         return points, True
 
-    def get_valid_exit_moves(self, source_pos: Coord) -> list[Coord]:
+    def _can_reach_exit_position(self, source_pos: Coord, exit_pos: Coord, piece_tile) -> bool:
         """
-        Get valid forest exit moves from a position.
-        Returns list of forest exits the piece can reach.
-        """
-        piece_tile = self.get_tile(source_pos)
-        if not piece_tile or not piece_tile.flipped:
-            return []
-        
-        valid_exits = []
-        
-        for exit_pos in self.forest_exits:
-            # Check if piece can move to this exit
-            if self._can_reach_exit(source_pos, exit_pos, piece_tile):
-                valid_exits.append(exit_pos)
-        
-        return valid_exits
-
-    def _can_reach_exit(self, source_pos: Coord, exit_pos: Coord, piece_tile) -> bool:
-        """
-        Check if a piece can reach a specific forest exit.
-        Uses same movement rules as normal piece movement.
+        Check if a piece can reach a specific forest exit position.
+        Forest exits are one step outside the board boundaries.
         """
         # Check if move is orthogonal (horizontal or vertical only)
         dx = abs(exit_pos.x - source_pos.x)
@@ -314,8 +340,112 @@ class Board:
         total_distance = dx + dy
         
         if piece_tile.tile_type in [TileType.BEAR, TileType.LUMBERJACK]:
-            # Can only move 1 space
-            if total_distance != 1:
+            # Can only move 1 space - must be adjacent to board edge to exit
+            # For bears/lumberjacks to reach exit position, they must be at the board edge
+            edge_distance = self._distance_to_board_edge(source_pos, exit_pos)
+            if edge_distance > 1:
+                return False
+        elif piece_tile.tile_type in [TileType.FOX, TileType.HUNTER, TileType.DUCK, TileType.PHEASANT]:
+            # Can move any number of spaces, check if path is clear
+            if total_distance < 1:
+                return False
+                
+            # Check if path is clear (only need to check path within the board)
+            path_clear = self._check_path_to_exit(source_pos, exit_pos)
+            if not path_clear:
+                return False
+        
+        return True
+
+    def _distance_to_board_edge(self, source_pos: Coord, exit_pos: Coord) -> int:
+        """Calculate minimum distance from source to the board edge in the direction of the exit."""
+        if exit_pos.y == -1:  # North exit
+            return source_pos.y + 1  # Distance to top edge (y=0) + 1 to exit
+        elif exit_pos.x == 7:  # East exit
+            return (6 - source_pos.x) + 1  # Distance to right edge (x=6) + 1 to exit
+        elif exit_pos.y == 7:  # South exit
+            return (6 - source_pos.y) + 1  # Distance to bottom edge (y=6) + 1 to exit
+        elif exit_pos.x == -1:  # West exit
+            return source_pos.x + 1  # Distance to left edge (x=0) + 1 to exit
+        return float('inf')
+
+    def _check_path_to_exit(self, source_pos: Coord, exit_pos: Coord) -> bool:
+        """Check if the path from source to exit is clear (within board boundaries)."""
+        move_dx = 0 if exit_pos.x == source_pos.x else (1 if exit_pos.x > source_pos.x else -1)
+        move_dy = 0 if exit_pos.y == source_pos.y else (1 if exit_pos.y > source_pos.y else -1)
+        
+        # Check each step along the path until we reach the board edge
+        current = Coord(source_pos.x + move_dx, source_pos.y + move_dy)
+        
+        while self.is_within_bounds(current):
+            tile = self.get_tile(current)
+            if tile:
+                return False  # Path blocked
+            current = Coord(current.x + move_dx, current.y + move_dy)
+        
+        return True
+
+    def get_valid_exit_positions(self, source_pos: Coord) -> list[Coord]:
+        """
+        Get valid forest exit positions the piece can reach to escape.
+        Returns list of edge positions the piece can move to and then escape from.
+        """
+        piece_tile = self.get_tile(source_pos)
+        if not piece_tile or not piece_tile.flipped:
+            return []
+        
+        valid_exits = []
+        
+        # Check all four edge exit positions
+        edge_positions = [
+            Coord(3, 0),  # North edge
+            Coord(6, 3),  # East edge  
+            Coord(3, 6),  # South edge
+            Coord(0, 3),  # West edge
+        ]
+        
+        for edge_pos in edge_positions:
+            # Check if piece can move to this edge position
+            if self._can_reach_edge_position(source_pos, edge_pos, piece_tile):
+                valid_exits.append(edge_pos)
+        
+        return valid_exits
+        edge_positions = [
+            Coord(3, 0),  # North edge
+            Coord(6, 3),  # East edge  
+            Coord(3, 6),  # South edge
+            Coord(0, 3),  # West edge
+        ]
+        
+        for edge_pos in edge_positions:
+            # Check if piece can move to this edge position
+            if self._can_reach_edge_position(source_pos, edge_pos, piece_tile):
+                valid_exits.append(edge_pos)
+        
+        return valid_exits
+
+    def _can_reach_edge_position(self, source_pos: Coord, edge_pos: Coord, piece_tile) -> bool:
+        """
+        Check if a piece can reach a specific edge position to escape.
+        Uses same movement rules as normal piece movement.
+        """
+        # If already at the edge position, can exit immediately
+        if source_pos == edge_pos:
+            return True
+        
+        # Check if move is orthogonal (horizontal or vertical only)
+        dx = abs(edge_pos.x - source_pos.x)
+        dy = abs(edge_pos.y - source_pos.y)
+        
+        if dx != 0 and dy != 0:
+            return False  # Diagonal moves not allowed
+        
+        # Check movement distance based on piece type
+        total_distance = dx + dy
+        
+        if piece_tile.tile_type in [TileType.BEAR, TileType.LUMBERJACK]:
+            # Can only move 1 space - must be adjacent to edge to exit in one move
+            if total_distance > 1:
                 return False
         elif piece_tile.tile_type in [TileType.FOX, TileType.HUNTER, TileType.DUCK, TileType.PHEASANT]:
             # Can move any number of spaces, but path must be clear
@@ -323,13 +453,13 @@ class Board:
                 return False
                 
             # Check if path is clear
-            move_dx = 0 if exit_pos.x == source_pos.x else (1 if exit_pos.x > source_pos.x else -1)
-            move_dy = 0 if exit_pos.y == source_pos.y else (1 if exit_pos.y > source_pos.y else -1)
+            move_dx = 0 if edge_pos.x == source_pos.x else (1 if edge_pos.x > source_pos.x else -1)
+            move_dy = 0 if edge_pos.y == source_pos.y else (1 if edge_pos.y > source_pos.y else -1)
             
             # Check each step along the path (excluding source and target)
             current = Coord(source_pos.x + move_dx, source_pos.y + move_dy)
             
-            while current != exit_pos:
+            while current != edge_pos:
                 tile = self.get_tile(current)
                 if tile:
                     return False  # Path blocked

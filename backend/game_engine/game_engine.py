@@ -96,13 +96,19 @@ class GameEngine:
         if action.type == ActionType.FLIP:
             self.board.flip_tile(action.target, player)
         elif action.type == ActionType.MOVE:
-            # Check if this is a forest exit move
+            # Check if this is a move to a forest exit position (outside board)
             if self.board.is_forest_exit(action.target):
-                points, success = self.board.escape_through_exit(action.source, player)
+                points, success = self.board.escape_to_exit_position(action.source, action.target, player)
                 if not success:
-                    raise ValueError("Failed to escape through forest exit")
+                    raise ValueError("Failed to escape to forest exit position")
             else:
+                # Normal move within the board
                 points, captured = self.board.move_tile(action.source, action.target, player)
+        elif action.type == ActionType.ESCAPE:
+            # Escape from current position (must be at edge)
+            points, success = self.board.escape_from_position(action.source, player)
+            if not success:
+                raise ValueError("Failed to escape through forest exit")
         elif action.type == ActionType.SHOOT:
             points = self.board.shoot(player, action.target, action.direction)
         elif action.type == ActionType.CUT:

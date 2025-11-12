@@ -7,6 +7,7 @@ class ActionType(Enum):
     MOVE = "move"
     SHOOT = "shoot"
     CUT = "cut"
+    ESCAPE = "escape"
 
 @dataclass(frozen=True)
 class Action:
