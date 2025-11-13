@@ -1,3 +1,6 @@
+
+![CI](https://github.com/matthijshulsebos/phage/actions/workflows/python-tests.yml/badge.svg?branch=main)
+[![codecov](https://codecov.io/gh/matthijshulsebos/phage/branch/main/graph/badge.svg)](https://codecov.io/gh/matthijshulsebos/phage)
 # phage
 
 <img width="512" height="512" alt="43ca2951-fb8c-4bd0-92c2-c7016ec9838d" src="https://github.com/user-attachments/assets/7e40b9c3-3d97-44ab-b9d6-5ae9c7ba91a0" />
