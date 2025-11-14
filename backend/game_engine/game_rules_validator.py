@@ -117,19 +117,19 @@ class GameRulesValidator:
         if not self.game_engine.board.is_within_bounds(action.target):
             return False, "Position out of bounds"
         
-        # Check if there's a hunter at the position
-        hunter_tile = self.game_engine.board.get_tile(action.target)
-        if not hunter_tile:
+        # Check if there's a T cell at the position
+        tcell_tile = self.game_engine.board.get_tile(action.target)
+        if not tcell_tile:
             return False, "No piece at that position"
         
-        if not hunter_tile.flipped:
+        if not tcell_tile.flipped:
             return False, "Cannot shoot with face-down piece"
         
-        if hunter_tile.tile_type != TileType.HUNTER:
-            return False, "Only hunters can shoot"
+        if tcell_tile.tile_type != TileType.T_CELL:
+            return False, "Only T cells can shoot"
         
         # Check ownership
-        can_move, ownership_msg = self._check_piece_ownership(player, hunter_tile)
+        can_move, ownership_msg = self._check_piece_ownership(player, tcell_tile)
         if not can_move:
             return False, ownership_msg
         
@@ -141,31 +141,31 @@ class GameRulesValidator:
         return True, ""
 
     def _validate_cut(self, player, action: Action) -> Tuple[bool, str]:
-        """Validate tree cutting action."""
+        """Validate debris removal action."""
         
         # Check if position is valid
         if not self.game_engine.board.is_within_bounds(action.target):
             return False, "Position out of bounds"
         
-        # Check if there's a lumberjack at the position
-        lumberjack_tile = self.game_engine.board.get_tile(action.target)
-        if not lumberjack_tile:
+        # Check if there's a dendritic cell at the position
+        dendritic_tile = self.game_engine.board.get_tile(action.target)
+        if not dendritic_tile:
             return False, "No piece at that position"
         
-        if not lumberjack_tile.flipped:
+        if not dendritic_tile.flipped:
             return False, "Cannot cut with face-down piece"
         
-        if lumberjack_tile.tile_type != TileType.LUMBERJACK:
-            return False, "Only lumberjacks can cut trees"
+        if dendritic_tile.tile_type != TileType.DENDRITIC_CELL:
+            return False, "Only dendritic cells can remove debris"
         
         # Check ownership
-        can_move, ownership_msg = self._check_piece_ownership(player, lumberjack_tile)
+        can_move, ownership_msg = self._check_piece_ownership(player, dendritic_tile)
         if not can_move:
             return False, ownership_msg
         
-        # Check if there are adjacent trees to cut
+        # Check if there are adjacent debris to remove
         from common.models.direction import Direction
-        has_adjacent_trees = False
+        has_adjacent_debris = False
         
         directions = [Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST]
         for direction in directions:
@@ -174,15 +174,13 @@ class GameRulesValidator:
                 'x': action.target.x + dx, 
                 'y': action.target.y + dy
             })()
-            
             if self.game_engine.board.is_within_bounds(adjacent_pos):
                 adjacent_tile = self.game_engine.board.get_tile(adjacent_pos)
-                if adjacent_tile and adjacent_tile.tile_type == TileType.TREE:
-                    has_adjacent_trees = True
+                if adjacent_tile and adjacent_tile.tile_type == TileType.DEBRIS:
+                    has_adjacent_debris = True
                     break
-        
-        if not has_adjacent_trees:
-            return False, "No trees adjacent to lumberjack"
+        if not has_adjacent_debris:
+            return False, "No debris adjacent to dendritic cell"
         
         return True, ""
 
@@ -191,9 +189,9 @@ class GameRulesValidator:
         Check if player can move this piece.
         
         Rules:
-        - Brown pieces (hunters/lumberjacks) can only be moved by PLAYER1
-        - Blue pieces (bears/foxes) can only be moved by PLAYER2  
-        - Green pieces (pheasants and ducks) can be moved by both players
+        - Immune system pieces (T cells/dendritic cells) can only be moved by PLAYER1
+        - Pathogen pieces (viruses/bacteria) can only be moved by PLAYER2  
+        - Neutral pieces (red blood cells) can be moved by both players
         - A green card that was revealed or moved by opponent cannot be moved immediately after
         """
         
@@ -204,22 +202,19 @@ class GameRulesValidator:
             return False, "Player has no faction assigned"
         
         # Check ownership based on player faction and tile faction
-        if tile.tile_type in [TileType.HUNTER, TileType.LUMBERJACK]:
-            # Brown pieces - only PLAYER1
+        if tile.tile_type in [TileType.T_CELL, TileType.DENDRITIC_CELL]:
+            # Immune system pieces - only PLAYER1
             if player.faction != PieceOwner.PLAYER1:
-                return False, "Cannot move opponent's hunter/lumberjack pieces"
-        
-        elif tile.tile_type in [TileType.BEAR, TileType.FOX]:
-            # Blue pieces - only PLAYER2  
+                return False, "Cannot move opponent's T cell/dendritic cell pieces"
+        elif tile.tile_type in [TileType.VIRUS, TileType.BACTERIA]:
+            # Pathogen pieces - only PLAYER2
             if player.faction != PieceOwner.PLAYER2:
-                return False, "Cannot move opponent's bear/fox pieces"
-        
-        elif tile.tile_type in [TileType.DUCK, TileType.PHEASANT]:
-            # Green pieces - both players can move them (restrictions checked separately)
+                return False, "Cannot move opponent's virus/bacteria pieces"
+        elif tile.tile_type == TileType.RED_BLOOD_CELL:
+            # Neutral pieces - both players can move them (restrictions checked separately)
             pass
-        
-        elif tile.tile_type == TileType.TREE:
-            return False, "Trees cannot be moved, only cut"
+        elif tile.tile_type == TileType.DEBRIS:
+            return False, "Debris cannot be moved, only removed"
         
         return True, ""
 
@@ -234,18 +229,16 @@ class GameRulesValidator:
         
         # Define capture rules
         capture_rules = {
-            TileType.BEAR: [TileType.HUNTER, TileType.LUMBERJACK],
-            TileType.FOX: [TileType.PHEASANT, TileType.DUCK],
-            TileType.HUNTER: [TileType.BEAR, TileType.FOX, TileType.PHEASANT, TileType.DUCK],
-            TileType.LUMBERJACK: [TileType.TREE],
+            TileType.VIRUS: [TileType.T_CELL, TileType.DENDRITIC_CELL],
+            TileType.BACTERIA: [TileType.RED_BLOOD_CELL],
+            TileType.T_CELL: [TileType.VIRUS, TileType.BACTERIA, TileType.RED_BLOOD_CELL],
+            TileType.DENDRITIC_CELL: [TileType.DEBRIS],
         }
-        
         if attacker_type in capture_rules:
             if target_type in capture_rules[attacker_type]:
                 return True, ""
             else:
                 return False, f"{attacker_type.name} cannot capture {target_type.name}"
-        
         return False, f"{attacker_type.name} cannot capture anything"
 
     def _check_movement_pattern(self, piece_tile, source: Coord, target: Coord) -> Tuple[bool, str]:
@@ -265,16 +258,14 @@ class GameRulesValidator:
         total_distance = dx + dy
         
         # Movement rules by piece type
-        if piece_type in [TileType.BEAR, TileType.LUMBERJACK]:
+        if piece_type in [TileType.VIRUS, TileType.DENDRITIC_CELL]:
             # Can only move 1 space
             if total_distance != 1:
                 return False, f"{piece_type.name} can only move 1 space"
-        
-        elif piece_type in [TileType.FOX, TileType.HUNTER, TileType.DUCK, TileType.PHEASANT]:
+        elif piece_type in [TileType.BACTERIA, TileType.T_CELL, TileType.RED_BLOOD_CELL]:
             # Can move any number of spaces in straight line
             if total_distance < 1:
                 return False, "Must move at least 1 space"
-        
         else:
             return False, f"Unknown piece type: {piece_type}"
         
@@ -311,8 +302,8 @@ class GameRulesValidator:
             piece_tile.previous_position.x == target.x and piece_tile.previous_position.y == target.y):
             return False, "Cannot return to previous position"
         
-        # For green pieces (ducks and pheasants), check opponent restrictions
-        if piece_tile.tile_type in [TileType.DUCK, TileType.PHEASANT]:
+        # For neutral pieces (red blood cells), check opponent restrictions
+        if piece_tile.tile_type == TileType.RED_BLOOD_CELL:
             # Check if opponent was the last to move this piece
             if (hasattr(piece_tile, 'last_moved_by') and piece_tile.last_moved_by and 
                 piece_tile.last_moved_by != player):

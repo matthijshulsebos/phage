@@ -38,8 +38,8 @@ class Tile:
 
     def is_movable(self):
         """Return True if this tile can be moved by a player."""
-        # Only trees cannot be moved (they can only be cut)
-        return self.tile_type != TileType.TREE
+        # Only debris cannot be moved (they can only be removed)
+        return self.tile_type != TileType.DEBRIS
 
     def belongs_to(self, player_faction):
         """Check if this tile is controlled by a player."""

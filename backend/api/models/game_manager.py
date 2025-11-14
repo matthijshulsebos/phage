@@ -20,7 +20,7 @@ class GameSession:
         self.player2_name = player2_name or "AI Bot"
         
         # Create players with proper factions
-        # Player 1 gets the Brown/Hunter faction (PLAYER1)
+        # Player 1 gets the Immune System (T Cell/Dendritic Cell) faction (PLAYER1)
         # Player 2 gets the Blue/Animal faction (PLAYER2)
         player1 = HumanPlayer(self.player1_name, PieceOwner.PLAYER1)
         player2 = HumanPlayer(self.player2_name, PieceOwner.PLAYER2) if player2_name else AIPlayer(self.player2_name, PieceOwner.PLAYER2)

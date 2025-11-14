@@ -1,13 +1,12 @@
 from enum import Enum
 
 class TileType(Enum):
-    BEAR = "bear"
-    FOX = "fox" 
-    HUNTER = "hunter"
-    LUMBERJACK = "lumberjack"
-    DUCK = "duck"
-    PHEASANT = "pheasant"
-    TREE = "tree"
+    VIRUS = "virus"
+    BACTERIA = "bacteria"
+    T_CELL = "t_cell"
+    DENDRITIC_CELL = "dendritic_cell"
+    RED_BLOOD_CELL = "red_blood_cell"
+    DEBRIS = "debris"
 
 class TileOwner(Enum):
     NONE = "none"
