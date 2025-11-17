@@ -19,7 +19,7 @@ class HumanPlayer(Player):
         if game_engine.phase.name == "FLIP":
             print("Actions: [F]lip tile, [M]ove piece")
         else:
-            print("Actions: [M]ove piece, [S]hoot (hunters), [C]ut tree (lumberjacks)")
+            print("Actions: [M]ove piece, [S]hoot (T cells), [C]lear debris (dendritic cells)")
         
         while True:
             try:
@@ -83,8 +83,8 @@ class HumanPlayer(Player):
             return self.choose_action(game_engine)
     
     def _choose_shoot_action(self, game_engine):
-        """Choose shooting action for hunters."""
-        print("Choose hunter position to shoot from (e.g., '2 3'):")
+        """Choose shooting action for T cells."""
+        print("Choose T cell position to shoot from (e.g., '2 3'):")
         try:
             x, y = map(int, input().split())
             source = Coord(x, y)
@@ -108,8 +108,8 @@ class HumanPlayer(Player):
             return self.choose_action(game_engine)
     
     def _choose_cut_action(self, game_engine):
-        """Choose tree to cut for lumberjacks."""
-        print("Choose lumberjack position to cut from (e.g., '2 3'):")
+        """Choose debris to clear for dendritic cells."""
+        print("Choose dendritic cell position to clear debris from (e.g., '2 3'):")
         try:
             x, y = map(int, input().split())
             source = Coord(x, y)

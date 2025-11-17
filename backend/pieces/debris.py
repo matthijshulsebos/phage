@@ -2,21 +2,22 @@ from .piece import Piece
 from typing import List
 
 
-class Tree(Piece):
+
+class Debris(Piece):
     """
-    Tree piece - 2 points
-    - Can be chopped down by lumberjacks
+    Debris piece - 2 points
+    - Can be removed by dendritic cells
     - Acts as an obstacle for all other pieces (cannot pass through)
-    - Cannot be moved, only captured
+    - Cannot be moved, only removed
     """
 
     @property
     def name(self):
-        return "Tree"
+        return "Debris"
 
     @property
     def symbol(self):
-        return "T"
+        return "X"
 
     @property
     def points(self):
@@ -24,7 +25,7 @@ class Tree(Piece):
 
     def valid_moves(self, board):
         """
-        Trees cannot move.
+        Debris cannot move.
         Return empty list.
         """
         return []

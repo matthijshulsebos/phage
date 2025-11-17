@@ -10,7 +10,7 @@ def game_manager():
 
 def test_create_and_play_game(game_manager):
     # Create a new game
-    game_id = game_manager.create_game("Alice", None)  # Alice vs AI
+    game_id = game_manager.create_game("Alice", None)  # Alice (Immune System) vs AI (Pathogens)
     state = game_manager.get_game_state(game_id)
     assert state is not None
     assert state["players"][0] == "Alice"

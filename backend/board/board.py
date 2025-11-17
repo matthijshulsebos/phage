@@ -30,18 +30,18 @@ class Board:
         # - 2 houthakkers en 8 jagers (bruine achtergrond)
         # - 7 eenden, 8 fazanten en 15 bomen (groene achtergrond)
         piece_distribution = [
-            # Animal team (Blue - Player 2)
-            (TileType.BEAR, TileOwner.PLAYER2, 2),       # 2 bears
-            (TileType.FOX, TileOwner.PLAYER2, 6),        # 6 foxes
-            
-            # Hunter team (Brown - Player 1)  
-            (TileType.LUMBERJACK, TileOwner.PLAYER1, 2), # 2 lumberjacks
-            (TileType.HUNTER, TileOwner.PLAYER1, 8),     # 8 hunters
-            
-            # Neutral pieces (Green - both players can move)
-            (TileType.DUCK, TileOwner.NEUTRAL, 7),       # 7 ducks  
-            (TileType.PHEASANT, TileOwner.NEUTRAL, 8),   # 8 pheasants
-            (TileType.TREE, TileOwner.NEUTRAL, 15),      # 15 trees
+            # Pathogen team (Red - Player 2)
+            (TileType.VIRUS, TileOwner.PLAYER2, 2),       # 2 viruses
+            (TileType.BACTERIA, TileOwner.PLAYER2, 6),    # 6 bacteria
+
+            # Immune system team (Blue - Player 1)
+            (TileType.DENDRITIC_CELL, TileOwner.PLAYER1, 2), # 2 dendritic cells
+            (TileType.T_CELL, TileOwner.PLAYER1, 8),          # 8 T cells
+
+            # Neutral pieces (both players can move)
+            (TileType.RED_BLOOD_CELL, TileOwner.NEUTRAL, 7),  # 7 red blood cells (2pt)
+            (TileType.RED_BLOOD_CELL, TileOwner.NEUTRAL, 8),  # 8 red blood cells (3pt)
+            (TileType.DEBRIS, TileOwner.NEUTRAL, 15),         # 15 debris
         ]
         
         # Create list of all pieces to place
@@ -85,14 +85,12 @@ class Board:
     def _get_piece_points(self, tile_type: TileType) -> int:
         """Return point value for each piece type."""
         point_values = {
-            TileType.BEAR: 10,
-            TileType.HUNTER: 5,
-            TileType.LUMBERJACK: 5,
-            TileType.FOX: 5,
-            TileType.PHEASANT: 3,
-            TileType.DUCK: 2,
-            TileType.TREE: 2,
-            # No EMPTY type anymore - empty means no tile
+            TileType.VIRUS: 10,
+            TileType.T_CELL: 5,
+            TileType.DENDRITIC_CELL: 5,
+            TileType.BACTERIA: 5,
+            TileType.RED_BLOOD_CELL: 3,  # Default to 3, but can be 2 for some
+            TileType.DEBRIS: 2,
         }
         return point_values.get(tile_type, 0)
 
@@ -158,18 +156,18 @@ class Board:
 
     def shoot(self, player, source_pos, direction):
         """
-        Hunter shooting action.
-        Hunters shoot in a straight line in their fixed direction until they hit a target.
+        T cell shooting action.
+        T cells shoot in a straight line in their fixed direction until they hit a target.
         """
         from common.models.direction import Direction
         
-        # Get the hunter piece
-        hunter_tile = self.get_tile(source_pos)
-        if not hunter_tile or hunter_tile.tile_type != TileType.HUNTER:
-            raise ValueError("No hunter at source position")
+        # Get the T cell piece
+        tcell_tile = self.get_tile(source_pos)
+        if not tcell_tile or tcell_tile.tile_type != TileType.T_CELL:
+            raise ValueError("No T cell at source position")
         
         # Determine shooting direction (for now, use provided direction)
-        # TODO: In full implementation, hunters should have fixed shooting directions
+        # TODO: In full implementation, T cells should have fixed shooting directions
         direction_map = {
             Direction.NORTH: (0, -1),
             Direction.SOUTH: (0, 1),
@@ -197,40 +195,40 @@ class Board:
             
             target_tile = self.get_tile(target_pos)
             
-            # If we hit a tile, check if hunter can capture it
+            # If we hit a tile, check if T cell can capture it
             if target_tile:
-                # Hunters can capture all animals
-                if target_tile.tile_type in [TileType.BEAR, TileType.FOX, TileType.PHEASANT, TileType.DUCK]:
+                # T cells can capture all pathogens and red blood cells
+                if target_tile.tile_type in [TileType.VIRUS, TileType.BACTERIA, TileType.RED_BLOOD_CELL]:
                     points = target_tile.points
                     target_tile.capture()
                     self.grid[target_pos.x][target_pos.y] = None
-                    logger.info(f"Hunter shot {target_tile.tile_type.name} for {points} points!")
+                    logger.info(f"T cell shot {target_tile.tile_type.name} for {points} points!")
                     break
                 else:
-                    # Shot blocked by non-capturable piece (tree, other hunter, etc.)
-                    logger.info(f"Hunter shot blocked by {target_tile.tile_type.name}")
+                    # Shot blocked by non-capturable piece (debris, other T cell, etc.)
+                    logger.info(f"T cell shot blocked by {target_tile.tile_type.name}")
                     break
             
             distance += 1
         
         return points
 
-    def cut_tree(self, source_pos, player):
+    def remove_debris(self, source_pos, player):
         """
-        Lumberjack tree cutting action.
-        Lumberjacks can cut trees in adjacent spaces (1 space away).
+        Dendritic cell debris removal action.
+        Dendritic cells can remove debris in adjacent spaces (1 space away).
         """
         from common.models.direction import Direction
         
-        # Get the lumberjack piece
-        lumberjack_tile = self.get_tile(source_pos)
-        if not lumberjack_tile or lumberjack_tile.tile_type != TileType.LUMBERJACK:
-            raise ValueError("No lumberjack at source position")
+        # Get the dendritic cell piece
+        dendritic_tile = self.get_tile(source_pos)
+        if not dendritic_tile or dendritic_tile.tile_type != TileType.DENDRITIC_CELL:
+            raise ValueError("No dendritic cell at source position")
         
         points = 0
-        trees_cut = 0
+        debris_removed = 0
         
-        # Check all 4 adjacent directions for trees
+        # Check all 4 adjacent directions for debris
         directions = [Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST]
         
         for direction in directions:
@@ -240,19 +238,19 @@ class Board:
             if self.is_within_bounds(target_pos):
                 target_tile = self.get_tile(target_pos)
                 
-                # If there's a tree, cut it down
-                if target_tile and target_tile.tile_type == TileType.TREE:
+                # If there's debris, remove it
+                if target_tile and target_tile.tile_type == TileType.DEBRIS:
                     points += target_tile.points
                     target_tile.capture()
                     self.grid[target_pos.x][target_pos.y] = None
-                    trees_cut += 1
-                    logger.info(f"Lumberjack cut down tree at ({target_pos.x}, {target_pos.y}) for {target_tile.points} points!")
+                    debris_removed += 1
+                    logger.info(f"Dendritic cell removed debris at ({target_pos.x}, {target_pos.y}) for {target_tile.points} points!")
         
-        if trees_cut == 0:
-            logger.info("No trees adjacent to lumberjack to cut")
+        if debris_removed == 0:
+            logger.info("No debris adjacent to dendritic cell to remove")
         else:
-            logger.info(f"Lumberjack cut down {trees_cut} tree(s) for {points} total points!")
-        
+            logger.info(f"Dendritic cell removed {debris_removed} debris piece(s) for {points} total points!")
+
         return points
 
     def is_forest_exit(self, pos: Coord) -> bool:
@@ -337,13 +335,13 @@ class Board:
         # Check movement distance based on piece type
         total_distance = dx + dy
         
-        if piece_tile.tile_type in [TileType.BEAR, TileType.LUMBERJACK]:
+        if piece_tile.tile_type in [TileType.VIRUS, TileType.DENDRITIC_CELL]:
             # Can only move 1 space - must be adjacent to board edge to exit
-            # For bears/lumberjacks to reach exit position, they must be at the board edge
+            # For viruses/dendritic cells to reach exit position, they must be at the board edge
             edge_distance = self._distance_to_board_edge(source_pos, exit_pos)
             if edge_distance > 1:
                 return False
-        elif piece_tile.tile_type in [TileType.FOX, TileType.HUNTER, TileType.DUCK, TileType.PHEASANT]:
+        elif piece_tile.tile_type in [TileType.BACTERIA, TileType.T_CELL, TileType.RED_BLOOD_CELL]:
             # Can move any number of spaces, check if path is clear
             if total_distance < 1:
                 return False
@@ -423,11 +421,11 @@ class Board:
         # Check movement distance based on piece type
         total_distance = dx + dy
         
-        if piece_tile.tile_type in [TileType.BEAR, TileType.LUMBERJACK]:
+        if piece_tile.tile_type in [TileType.VIRUS, TileType.DENDRITIC_CELL]:
             # Can only move 1 space - must be adjacent to edge to exit in one move
             if total_distance > 1:
                 return False
-        elif piece_tile.tile_type in [TileType.FOX, TileType.HUNTER, TileType.DUCK, TileType.PHEASANT]:
+        elif piece_tile.tile_type in [TileType.BACTERIA, TileType.T_CELL, TileType.RED_BLOOD_CELL]:
             # Can move any number of spaces, but path must be clear
             if total_distance < 1:
                 return False

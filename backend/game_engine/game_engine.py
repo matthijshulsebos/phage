@@ -113,7 +113,7 @@ class GameEngine:
         elif action.type == ActionType.SHOOT:
             points = self.board.shoot(player, action.target, action.direction)
         elif action.type == ActionType.CUT:
-            points = self.board.cut_tree(action.target, player)
+            points = self.board.remove_debris(action.target, player)
 
         return points
 

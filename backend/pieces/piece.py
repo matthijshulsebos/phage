@@ -14,7 +14,7 @@ class Piece(ABC):
     @property
     @abstractmethod
     def name(self):
-        """Return the name of the pieces (e.g., 'Hunter')."""
+        """Return the name of the piece (e.g., 'T Cell')."""
         pass
 
     @property
