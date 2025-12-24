@@ -7,6 +7,7 @@ from player.ai_player import AIPlayer
 from player.human_player import HumanPlayer
 from pieces.piece_owner import PieceOwner
 from common.models.action import Action
+from tile.tile_types import TileType, TileOwner
 
 
 class GameSession:
@@ -153,16 +154,16 @@ class GameSessionManager:
                         'x': x,
                         'y': y,
                         'flipped': tile.flipped,
-                        'tile_type': tile.tile_type.name if hasattr(tile, 'tile_type') else 'EMPTY',
-                        'faction': tile.faction.name if hasattr(tile, 'faction') else 'NONE'
+                        'tile_type': tile.tile_type.value if hasattr(tile, 'tile_type') else TileType.EMPTY.value,
+                        'faction': tile.faction.value if hasattr(tile, 'faction') else TileOwner.NONE.value
                     })
                 else:
                     row.append({
                         'x': x,
                         'y': y,
                         'flipped': False,
-                        'tile_type': 'EMPTY',
-                        'faction': 'NONE'
+                        'tile_type': TileType.EMPTY.value,
+                        'faction': TileOwner.NONE.value
                     })
             board_state.append(row)
         
@@ -175,7 +176,7 @@ class GameSessionManager:
             'players': [p.name for p in game.players],
             'current_player': game.current_player.name,
             'current_turn': game.current_turn,
-            'phase': game.phase.name,
+            'phase': game.phase.value,  # Use .value for enum
             'scores': game.scores,
             'rounds_remaining': game.rounds_remaining,
             'board_size': game.board.size,
@@ -196,7 +197,7 @@ class GameSessionManager:
                         'is_active': session.is_active,
                         'created_at': session.created_at.isoformat(),
                         'current_player': session.game_engine.current_player.name,
-                        'phase': session.game_engine.phase.name,
+                        'phase': session.game_engine.phase.value,  # Use .value for enum
                         'winner': session.winner
                     })
             

@@ -7,6 +7,7 @@ class TileType(Enum):
     DENDRITIC_CELL = "dendritic_cell"
     RED_BLOOD_CELL = "red_blood_cell"
     DEBRIS = "debris"
+    EMPTY = "empty"  # Added for center tile
 
 class TileOwner(Enum):
     NONE = "none"
