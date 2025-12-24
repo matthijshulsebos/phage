@@ -12,27 +12,30 @@ from tile.tile_types import TileType, TileOwner
 
 class GameSession:
     """Represents a single game session with metadata."""
-    
+
     def __init__(self, game_id: str, player1_name: str, player2_name: str = None):
         self.game_id = game_id
         self.created_at = datetime.now()
         self.last_activity = datetime.now()
         self.player1_name = player1_name
         self.player2_name = player2_name or "AI Bot"
-        
+
         # Create players with proper factions
         # Player 1 gets the Immune System (T Cell/Dendritic Cell) faction (PLAYER1)
         # Player 2 gets the Blue/Animal faction (PLAYER2)
         player1 = HumanPlayer(self.player1_name, PieceOwner.PLAYER1)
         player2 = HumanPlayer(self.player2_name, PieceOwner.PLAYER2) if player2_name else AIPlayer(self.player2_name, PieceOwner.PLAYER2)
-        
+
         # Create game engine
         self.game_engine = GameEngine([player1, player2])
-        
+
         # Track game state
         self.is_active = True
         self.winner = None
         self.game_history = []  # Track all moves
+
+        # AI delay - don't let AI move until this time
+        self.ai_can_move_after = None
     
     def update_activity(self):
         """Update last activity timestamp."""
@@ -130,8 +133,10 @@ class GameSessionManager:
                     session.is_active = False
                     session.winner = session.game_engine.winner.name if session.game_engine.winner else "Draw"
                 else:
-                    # Process AI turn if the current player is an AI
-                    self._process_ai_turns(session)
+                    # Set delay for AI to "think" - processed when frontend polls
+                    current_player = session.game_engine.current_player
+                    if isinstance(current_player, AIPlayer):
+                        session.ai_can_move_after = datetime.now() + timedelta(seconds=1)
 
                 return True, f"Action applied. Points gained: {points}", points
 
@@ -153,8 +158,17 @@ class GameSessionManager:
 
             ai_action = current_player.choose_action(session.game_engine)
             if not ai_action:
-                logger.warning(f"AI {current_player.name} could not choose an action")
-                break
+                # AI has no valid moves - pass the turn
+                logger.warning(f"AI {current_player.name} has no valid moves, passing turn")
+                session.game_engine.next_turn()
+
+                if session.game_engine.is_game_over:
+                    session.is_active = False
+                    session.winner = session.game_engine.winner.name if session.game_engine.winner else "Draw"
+                    break
+
+                ai_turns += 1
+                continue
 
             try:
                 points = session.game_engine.apply_action(current_player, ai_action)
@@ -171,21 +185,31 @@ class GameSessionManager:
 
             except ValueError as e:
                 logger.error(f"AI action failed: {e}")
-                break
+                # Advance turn anyway to prevent getting stuck
+                session.game_engine.next_turn()
+                ai_turns += 1
 
     def get_game_state(self, game_id: str) -> Optional[Dict]:
         """Get the current state of a game."""
         session = self.get_game(game_id)
         if not session:
             return None
-        
+
+        # Process AI turns if it's AI's turn and delay has passed
+        if session.is_active:
+            current_player = session.game_engine.current_player
+            if isinstance(current_player, AIPlayer):
+                if session.ai_can_move_after and datetime.now() >= session.ai_can_move_after:
+                    self._process_ai_turns(session)
+                    session.ai_can_move_after = None
+
         game = session.game_engine
         
-        # Build board state
+        # Build board state (rows first, then columns within each row)
         board_state = []
-        for x in range(game.board.size):
+        for y in range(game.board.size):
             row = []
-            for y in range(game.board.size):
+            for x in range(game.board.size):
                 tile = game.board.get_tile(type('Coord', (), {'x': x, 'y': y})())
                 if tile:
                     row.append({
@@ -255,7 +279,36 @@ class GameSessionManager:
                 logger.info(f"Cleaned up {len(expired_games)} expired games")
 
             return len(expired_games)
-    
+
+    def resign_game(self, game_id: str, player_name: str) -> Tuple[bool, str]:
+        """
+        Handle player resignation.
+        Returns (success, winner_name).
+        """
+        from common.logging_config import logger
+        with self.lock:
+            session = self.sessions.get(game_id)
+            if not session:
+                return False, ""
+
+            if not session.is_active:
+                return False, session.winner or ""
+
+            # Find the opponent (winner)
+            players = session.game_engine.players
+            winner = next((p for p in players if p.name != player_name), None)
+
+            if not winner:
+                return False, ""
+
+            # End the game
+            session.is_active = False
+            session.winner = winner.name
+            session.game_engine.phase = session.game_engine.phase.__class__("finished")
+
+            logger.info(f"Player {player_name} resigned game {game_id}. Winner: {winner.name}")
+            return True, winner.name
+
     def delete_game(self, game_id: str) -> bool:
         """Delete a specific game session."""
         from common.logging_config import logger

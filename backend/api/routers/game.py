@@ -51,7 +51,7 @@ async def apply_action(game_id: str, action_request: ActionRequest, player_name:
     """Apply a player action to the game."""
     try:
         # Convert API action to internal action
-        action_type = ActionType[action_request.action_type.value]
+        action_type = action_request.action_type
         
         source = None
         target = None
@@ -111,13 +111,28 @@ async def list_games(include_inactive: bool = False):
         ) from e
 
 
+@router.post("/{game_id}/resign")
+async def resign_game(game_id: str, player_name: str):
+    """Resign from a game, making the opponent the winner."""
+    success, winner = game_session_manager.resign_game(game_id, player_name)
+    if not success:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    game_state = game_session_manager.get_game_state(game_id)
+    return {
+        "message": f"{player_name} resigned. {winner} wins!",
+        "winner": winner,
+        "game_state": GameStateResponse(**game_state) if game_state else None
+    }
+
+
 @router.delete("/{game_id}")
 async def delete_game(game_id: str):
     """Delete a game session."""
     success = game_session_manager.delete_game(game_id)
     if not success:
         raise HTTPException(status_code=404, detail="Game not found")
-    
+
     return {"message": f"Game {game_id} deleted successfully"}
 
 

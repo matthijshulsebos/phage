@@ -69,12 +69,26 @@ class PhageAPI {
     const response = await fetch(`${API_BASE_URL}/api/game/${gameId}`, {
       method: 'DELETE'
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Failed to delete game');
     }
-    
+
+    return response.json();
+  }
+
+  async resignGame(gameId, playerName) {
+    const response = await fetch(
+      `${API_BASE_URL}/api/game/${gameId}/resign?player_name=${encodeURIComponent(playerName)}`,
+      { method: 'POST' }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to resign');
+    }
+
     return response.json();
   }
 }

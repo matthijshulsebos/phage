@@ -68,7 +68,7 @@ class GameEngine:
 
         self.check_phase_transition()
         self.current_player_turn_index = (self.current_player_turn_index + 1) % len(self.players)
-        pass
+        self.current_turn += 1
 
 
     def check_phase_transition(self) -> None:
@@ -76,11 +76,16 @@ class GameEngine:
 
         if self.board.all_tiles_face_up and self.phase == GamePhase.FLIP:
             self.advance_phase()
-        elif self.phase == GamePhase.ESCAPE and self.rounds_remaining <= 0:
-            self.advance_phase()
+        elif self.phase == GamePhase.ESCAPE:
+            # Decrement rounds after each full round (when last player just finished their turn)
+            if self.current_player_turn_index == len(self.players) - 1:
+                self.rounds_remaining -= 1
+                logger.info(f"Escape phase: {self.rounds_remaining} rounds remaining")
+            if self.rounds_remaining <= 0:
+                self.advance_phase()
         elif self.phase == GamePhase.FINISHED:
             self.end_game()
-        
+
         return None
 
 
@@ -122,10 +127,11 @@ class GameEngine:
         if self.phase == GamePhase.FLIP:
             self.phase = GamePhase.ESCAPE
             self.rounds_remaining = 5
+            logger.info("Entering ESCAPE phase with 5 rounds")
         elif self.phase == GamePhase.ESCAPE:
-            self.rounds_remaining -= 1
-            if self.rounds_remaining <= 0:
-                self.phase = GamePhase.FINISHED
+            self.phase = GamePhase.FINISHED
+            logger.info("Game finished!")
+            self.end_game()
 
 
     def end_game(self) -> None:

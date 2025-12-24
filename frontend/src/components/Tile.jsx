@@ -1,12 +1,12 @@
-import { getPieceSymbol } from '../utils/notation';
+import PieceArt from './PieceArt';
 import './Tile.css';
 
 function Tile({ tile, x, y, isSelected, isValidMove, onClick }) {
   const { flipped, tile_type, faction } = tile;
-  
+
   // Center tile is always empty
   const isEmpty = tile_type === 'empty';
-  
+
   const tileClasses = [
     'tile',
     flipped && faction, // Only add faction class if flipped
@@ -23,14 +23,10 @@ function Tile({ tile, x, y, isSelected, isValidMove, onClick }) {
       ) : !flipped ? (
         <div className="tile-back">?</div>
       ) : (
-        <div className="tile-piece">
-          {/* TODO: Replace with actual images once added */}
-          <div className="piece-symbol">{getPieceSymbol(tile_type)}</div>
-          <div className="piece-type">{tile_type.replace('_', ' ')}</div>
-        </div>
+        <PieceArt type={tile_type} size={72} />
       )}
-      
-      {isValidMove && <div className="move-indicator">✓</div>}
+
+      {isValidMove && <div className="move-indicator">+</div>}
     </div>
   );
 }

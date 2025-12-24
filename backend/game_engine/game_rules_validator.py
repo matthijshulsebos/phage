@@ -88,6 +88,9 @@ class GameRulesValidator:
         # Check if target position allows movement
         to_tile = self.game_engine.board.get_tile(action.target)
         if to_tile:
+            # Cannot move onto face-down tiles
+            if not to_tile.flipped:
+                return False, "Cannot move onto face-down tile"
             # Check if we can capture this piece
             can_capture, capture_msg = self._check_capture_rules(from_tile, to_tile)
             if not can_capture:
