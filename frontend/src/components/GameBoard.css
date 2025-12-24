@@ -1,0 +1,56 @@
+.game-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.board-coordinates {
+  display: flex;
+  gap: 2px;
+}
+
+.board-coordinates.top,
+.board-coordinates.bottom {
+  margin-left: 32px;
+  margin-right: 32px;
+}
+
+.coord-label {
+  width: 60px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.board-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.board-coordinates.left,
+.board-coordinates.right {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.board-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #2a2a4a;
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.board-row {
+  display: flex;
+  gap: 2px;
+}
