@@ -1,4 +1,8 @@
-const API_BASE_URL = 'http://localhost:8000';
+// Detect if we're accessing from localhost or network
+const hostname = window.location.hostname;
+const API_BASE_URL = hostname === 'localhost' || hostname === '127.0.0.1'
+  ? 'http://localhost:8000'
+  : `http://${hostname}:8000`;
 
 class PhageAPI {
   async createGame(player1Name, player2Name = null) {
