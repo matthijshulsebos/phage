@@ -12,7 +12,7 @@
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
-.tile:hover {
+.tile:hover:not(.empty-tile) {
   border-color: #888;
   transform: scale(1.05);
 }
@@ -42,20 +42,20 @@
   border-color: #333;
 }
 
-/* Faction colors */
-.tile.player1 {
+/* Faction colors - ONLY for face-up tiles */
+.tile.flipped.player1 {
   background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
 }
 
-.tile.player2 {
+.tile.flipped.player2 {
   background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
 }
 
-.tile.neutral {
+.tile.flipped.neutral {
   background: linear-gradient(135deg, #ca8a04 0%, #eab308 100%);
 }
 
-.tile.none {
+.tile.flipped.none {
   background: linear-gradient(135deg, #404040 0%, #525252 100%);
 }
 
@@ -68,14 +68,15 @@
   justify-content: center;
   font-size: 32px;
   font-weight: bold;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.2);
   background: repeating-linear-gradient(
     45deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.05) 10px,
-    rgba(0, 0, 0, 0.05) 10px,
-    rgba(0, 0, 0, 0.05) 20px
+    rgba(138, 43, 226, 0.15),
+    rgba(138, 43, 226, 0.15) 10px,
+    rgba(75, 0, 130, 0.15) 10px,
+    rgba(75, 0, 130, 0.15) 20px
   );
+  border-radius: 4px;
 }
 
 /* Tile piece (face-up) */

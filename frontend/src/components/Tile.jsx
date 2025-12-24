@@ -9,7 +9,8 @@ function Tile({ tile, x, y, isSelected, isValidMove, onClick }) {
   
   const tileClasses = [
     'tile',
-    faction,
+    flipped && faction, // Only add faction class if flipped
+    flipped && 'flipped', // Add flipped class to enable faction colors
     isSelected && 'selected',
     isValidMove && 'valid-move',
     isEmpty && 'empty-tile'
