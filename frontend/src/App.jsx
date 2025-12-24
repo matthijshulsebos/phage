@@ -13,19 +13,13 @@ function App() {
   const [opponentName, setOpponentName] = useState('');
 
   const createGame = async () => {
-    if (!playerName) {
-      setError('Please enter your name');
-      return;
-    }
-
+    const name = playerName || 'Player';
+    
     setLoading(true);
     setError(null);
     
     try {
-      const response = await api.createGame(
-        playerName, 
-        opponentName || null
-      );
+      const response = await api.createGame(name, null); // Always vs AI
       setGameId(response.game_id);
       setGameState(response.game_state);
     } catch (err) {
@@ -66,20 +60,11 @@ function App() {
           <p>Immune System vs Pathogens</p>
           
           <div className="create-game-form">
-            <input
-              type="text"
-              placeholder="Your name"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Opponent name (leave empty for AI)"
-              value={opponentName}
-              onChange={(e) => setOpponentName(e.target.value)}
-            />
-            <button onClick={createGame} disabled={loading}>
-              {loading ? 'Creating...' : 'Create Game'}
+            <button onClick={() => {
+              setPlayerName('Player');
+              createGame();
+            }} disabled={loading}>
+              {loading ? 'Creating Game...' : 'Play vs AI'}
             </button>
           </div>
           
