@@ -129,11 +129,49 @@ class GameSessionManager:
                 if session.game_engine.is_game_over:
                     session.is_active = False
                     session.winner = session.game_engine.winner.name if session.game_engine.winner else "Draw"
+                else:
+                    # Process AI turn if the current player is an AI
+                    self._process_ai_turns(session)
 
                 return True, f"Action applied. Points gained: {points}", points
 
             except ValueError as e:
                 return False, str(e), 0
+
+    def _process_ai_turns(self, session: GameSession):
+        """Process AI turns until it is a human player turn or game is over."""
+        from common.logging_config import logger
+
+        max_ai_turns = 10  # Safety limit
+        ai_turns = 0
+
+        while ai_turns < max_ai_turns and session.is_active:
+            current_player = session.game_engine.current_player
+
+            if not isinstance(current_player, AIPlayer):
+                break
+
+            ai_action = current_player.choose_action(session.game_engine)
+            if not ai_action:
+                logger.warning(f"AI {current_player.name} could not choose an action")
+                break
+
+            try:
+                points = session.game_engine.apply_action(current_player, ai_action)
+                session.add_to_history(current_player.name, ai_action)
+                session.game_engine.update_scores(current_player, points)
+                session.game_engine.next_turn()
+
+                if session.game_engine.is_game_over:
+                    session.is_active = False
+                    session.winner = session.game_engine.winner.name if session.game_engine.winner else "Draw"
+                    break
+
+                ai_turns += 1
+
+            except ValueError as e:
+                logger.error(f"AI action failed: {e}")
+                break
 
     def get_game_state(self, game_id: str) -> Optional[Dict]:
         """Get the current state of a game."""

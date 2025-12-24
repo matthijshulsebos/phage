@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
 import './GameBoard.css';
 import Tile from './Tile';
 
-function GameBoard({ boardState, onTileClick, selectedTile, validMoves }) {
+function GameBoard({ boardState, onTileClick, selectedTile, validMoves, disabled }) {
   const boardSize = 7;
+  const boardClassName = disabled ? 'game-board disabled' : 'game-board';
 
   return (
-    <div className="game-board">
+    <div className={boardClassName}>
       <div className="board-coordinates top">
         {Array.from({ length: boardSize }, (_, i) => (
           <div key={i} className="coord-label">
@@ -36,7 +36,7 @@ function GameBoard({ boardState, onTileClick, selectedTile, validMoves }) {
                 
                 return (
                   <Tile
-                    key={`${x}-${y}`}
+                    key={x + '-' + y}
                     tile={tile}
                     x={x}
                     y={y}
